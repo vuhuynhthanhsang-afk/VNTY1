@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Việt Nam tôi yêu</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 28px;
+            text-align: center;
+            background-color: #f0f8ff;
+            margin: 0;
+            padding: 0;
+        }
+        button {
+            font-size: 28px;
+            padding: 10px 20px;
+            margin: 10px;
+        }
+        #question-container {
+            margin-top: 20px;
+        }
+        .hidden {
+            display: none;
+        }
+        #timer {
+            font-size: 30px;
+            font-weight: bold;
+            color: red;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Trò chơi: Việt Nam tôi yêu</h1>
+    <div id="start-screen">
+        <p>Nhập tên người chơi:</p>
+        <input type="text" id="player-name" style="font-size:28px; padding:5px;">
+        <br>
+        <button id="start-btn">Bắt đầu</button>
+    </div>
+
+    <div id="game-screen" class="hidden">
+        <div id="timer">30</div>
+        <div id="question-container"></div>
+        <div id="feedback" style="font-weight:bold; margin-top:20px;"></div>
+    </div>
+
+    <div id="end-screen" class="hidden">
+        <h2>Kết thúc trò chơi!</h2>
+        <p id="final-score"></p>
+        <h3>Bảng xếp hạng</h3>
+        <ol id="leaderboard"></ol>
+        <button onclick="location.reload()">Chơi lại</button>
+    </div>
+
+    <audio id="bg-music" src="nhac_nen_vui_ve_song_dong_de_thuong.mp3" loop></audio>
+    <audio id="correct-sound" src="tieng_vo_tay.mp3"></audio>
+    <audio id="wrong-sound" src="am_thanh_tra_loi_sai.mp3"></audio>
+
+    <script>
+        const startBtn = document.getElementById("start-btn");
+        const startScreen = document.getElementById("start-screen");
+        const gameScreen = document.getElementById("game-screen");
+        const endScreen = document.getElementById("end-screen");
+        const timerEl = document.getElementById("timer");
+        const questionContainer = document.getElementById("question-container");
+        const feedback = document.getElementById("feedback");
+        const bgMusic = document.getElementById("bg-music");
+        const correctSound = document.getElementById("correct-sound");
+        const wrongSound = document.getElementById("wrong-sound");
+
+        let questions = [
+            { type: "mcq", question: "Việt Nam nằm ở khu vực nào của châu Á?", options: ["Đông Nam Á", "Nam Á", "Tây Á"], answer: 0 },
+            { type: "mcq", question: "Địa hình chủ yếu của Việt Nam là gì?", options: ["Đồng bằng", "Đồi núi", "Sa mạc"], answer: 1 },
+            { type: "mcq", question: "Khí hậu Việt Nam chủ yếu là?", options: ["Nhiệt đới gió mùa", "Ôn đới", "Hàn đới"], answer: 0 },
+            { type: "mcq", question: "Sông dài nhất Việt Nam là?", options: ["Sông Hồng", "Sông Đồng Nai", "Sông Mê Kông"], answer: 2 },
+            { type: "mcq", question: "Việt Nam có đường bờ biển dài khoảng bao nhiêu km?", options: ["3260 km", "500 km", "1200 km"], answer: 0 },
+            { type: "mcq", question: "Khoáng sản nào Việt Nam có nhiều?", options: ["Than đá", "Dầu mỏ", "Kim cương"], answer: 0 },
+            { type: "mcq", question: "Vùng biển Việt Nam tiếp giáp với biển nào?", options: ["Biển Đông", "Biển Đen", "Biển Đỏ"], answer: 0 }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let timer;
+        let playerName = "";
+
+        startBtn.addEventListener("click", () => {
+            playerName = document.getElementById("player-name").value.trim();
+            if (!playerName) {
+                alert("Vui lòng nhập tên!");
+                return;
+            }
+            startScreen.classList.add("hidden");
+            gameScreen.classList.remove("hidden");
+
+            // Phát nhạc nền an toàn
+            bgMusic.play().catch(err => {
+                console.log("Trình duyệt chặn autoplay, sẽ phát khi người chơi chọn đáp án đầu tiên.");
+            });
+
+            showQuestion();
+        });
+
+        function showQuestion() {
+            feedback.textContent = "";
+            let q = questions[currentQuestionIndex];
+            questionContainer.innerHTML = `<p>${q.question}</p>`;
+            q.options.forEach((opt, i) => {
+                let btn = document.createElement("button");
+                btn.textContent = opt;
+                btn.onclick = () => checkAnswer(i);
+                questionContainer.appendChild(btn);
+            });
+            startTimer();
+        }
+
+        function startTimer() {
+            let timeLeft = 30;
+            timerEl.textContent = timeLeft;
+            clearInterval(timer);
+            timer = setInterval(() => {
+                timeLeft--;
+                timerEl.textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    nextQuestion();
+                }
+            }, 1000);
+        }
+
+        function checkAnswer(selected) {
+            clearInterval(timer);
+            let q = questions[currentQuestionIndex];
+            if (selected === q.answer) {
+                feedback.textContent = "Chính xác!";
+                correctSound.play();
+                score++;
+                setTimeout(nextQuestion, 1500);
+            } else {
+                feedback.textContent = "Sai rồi!";
+                wrongSound.play();
+                setTimeout(() => {
+                    feedback.textContent = `Đáp án đúng: ${q.options[q.answer]}`;
+                    setTimeout(nextQuestion, 2000);
+                }, 1000);
+            }
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                showQuestion();
+            } else {
+                endGame();
+            }
+        }
+
+        function endGame() {
+            gameScreen.classList.add("hidden");
+            endScreen.classList.remove("hidden");
+            document.getElementById("final-score").textContent = `${playerName} đạt ${score} điểm`;
+
+            let leaderboard = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+            leaderboard.push({ name: playerName, score: score });
+            leaderboard.sort((a, b) => b.score - a.score);
+            localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
+
+            let list = document.getElementById("leaderboard");
+            list.innerHTML = "";
+            leaderboard.forEach(item => {
+                let li = document.createElement("li");
+                li.textContent = `${item.name}: ${item.score} điểm`;
+                list.appendChild(li);
+            });
+        }
+    </script>
+</body>
+</html>
